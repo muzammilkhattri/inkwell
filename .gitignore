@@ -1,0 +1,12 @@
+.build/
+build/
+.swiftpm/
+*.xcodeproj/
+.DS_Store
+
+# Internal notes and working files, not part of the published project
+audit/
+design/logo-concepts/
+
+# Old screenshots (README images live in screenshots/readme/)
+screenshots/*.png
