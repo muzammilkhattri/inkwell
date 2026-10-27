@@ -178,12 +178,23 @@ enum Classifier {
         return compact
     }
 
-    static func magicLink(subject: String, html: String, text: String) -> URL? {
-        let lower = (subject + " " + text.prefix(800)).lowercased()
-        guard ["sign in", "sign-in", "log in", "login", "magic link", "verify your email", "confirm your email"].contains(where: { lower.contains($0) }) else { return nil }
+    /// A sign-in link: the email talks about signing in and has a link that looks like one.
+    /// Mailing lists (List-Unsubscribe) must say so in the subject, since newsletters often
+    /// mention "sign in" in passing. Unsubscribe, preference and browser-view links are never
+    /// taken, even though they usually carry a token.
+    static func magicLink(subject: String, html: String, text: String, bulk: Bool = false) -> URL? {
+        let phrases = ["sign in", "sign-in", "log in", "login", "magic link", "verify your email", "confirm your email"]
+        let subjectHit = phrases.contains { subject.lowercased().contains($0) }
+        let bodyHit = phrases.contains { text.prefix(800).lowercased().contains($0) }
+        guard subjectHit || (bodyHit && !bulk) else { return nil }
         let source = html.isEmpty ? text : html
         let candidates = httpsLink.matches(in: source, range: NSRange(source.startIndex..., in: source)).compactMap { Range($0.range, in: source).map { String(source[$0]) } }
-        let hit = candidates.first { c in let l = c.lowercased(); return ["login", "signin", "sign-in", "magic", "verify", "auth", "token", "confirm"].contains { l.contains($0) } }
+        let hit = candidates.first { c in
+            // Click trackers wrap the real address; judge the decoded whole.
+            let l = (HTMLText.decodeEntities(c).removingPercentEncoding ?? c).lowercased()
+            if ["unsubscribe", "optout", "opt-out", "preferences", "list-manage", "manage-subscription", "view-in-browser", "webversion"].contains(where: { l.contains($0) }) { return false }
+            return ["login", "signin", "sign-in", "sign_in", "magic", "verify", "/auth", "auth?", "token=", "confirm"].contains { l.contains($0) }
+        }
         return hit.flatMap { URL(string: HTMLText.decodeEntities($0)) }
     }
 
@@ -193,9 +204,9 @@ enum Classifier {
     }
 
     /// A code wins over a link: code emails often also contain a "sign in" button.
-    static func signIn(subject: String, html: String, text: String) -> SignIn? {
+    static func signIn(subject: String, html: String, text: String, bulk: Bool = false) -> SignIn? {
         if let c = oneTimeCode(subject: subject, text: text) { return .code(c) }
-        if let l = magicLink(subject: subject, html: html, text: text) { return .link(l) }
+        if let l = magicLink(subject: subject, html: html, text: text, bulk: bulk) { return .link(l) }
         return nil
     }
 

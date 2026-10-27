@@ -49,7 +49,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     static func signIn(for m: MessageRecord) -> Classifier.SignIn? {
         let parsed = Database.shared.raw(for: m.id).map(MIME.parse)
-        return Classifier.signIn(subject: m.subject, html: parsed?.html ?? "", text: parsed?.plainText ?? m.snippet)
+        return Classifier.signIn(subject: m.subject, html: parsed?.html ?? "", text: parsed?.plainText ?? m.snippet,
+                                  bulk: !m.listUnsubscribe.isEmpty)
     }
 
     /// Removes a delivered banner once the user acted on the same mail elsewhere (e.g. the sign-in popup).

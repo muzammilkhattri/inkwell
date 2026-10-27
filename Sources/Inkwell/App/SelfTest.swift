@@ -122,6 +122,12 @@ enum SelfTest {
             let got = Classifier.oneTimeCode(subject: s, text: t)
             check("OTP \(want ?? "none") ← \(s.isEmpty ? String(t.prefix(30)) : String(s.prefix(30))) (got \(got ?? "none"))", got == want)
         }
+        // Sign-in links: a newsletter that mentions signing in, with a tokenised unsubscribe link.
+        let promoHTML = #"<p>Sign in with your work email and run one on us.</p><a href="https://x.clicks.example/CL0/https:%2F%2Funsubscribe.resend.com%2F%3Ftoken=abc">Unsubscribe</a>"#
+        check("Newsletter is not a sign-in link", Classifier.signIn(subject: "Your pentest is on us today", html: promoHTML, text: "Sign in with your work email and run one on us.", bulk: true) == nil)
+        check("Unsubscribe link never a sign-in link", Classifier.magicLink(subject: "Sign in to Acme", html: #"<a href="https://acme.example/unsubscribe?token=abc">x</a>"#, text: "") == nil)
+        let magic = Classifier.magicLink(subject: "Your sign-in link for Acme", html: #"<a href="https://acme.example/unsubscribe?token=u">Unsub</a><a href="https://acme.example/auth/magic?token=t">Sign in</a>"#, text: "Click to sign in.", bulk: true)
+        check("Real magic link found (\(magic?.absoluteString ?? "none"))", magic?.absoluteString == "https://acme.example/auth/magic?token=t")
         check("Promo category", Classifier.category(from: EmailAddress(name: "Shop", email: "news@shop.com"), subject: "50% off sale ends tonight", text: "", headers: [("List-Unsubscribe", "<mailto:u@shop.com>")]) == .promos)
         check("Update category", Classifier.category(from: EmailAddress(name: "Bank", email: "noreply@bank.com"), subject: "Your statement is ready", text: "", headers: []) == .updates)
         check("Brand impersonation", Classifier.phishingCheck(from: EmailAddress(name: "PayPal Support", email: "help@secure-pay.xyz"), headers: []) != nil)

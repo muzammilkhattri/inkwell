@@ -36,15 +36,15 @@ struct RootView: View {
                     .overlay(alignment: .trailing) { resizeHandle }
                 detail
                     .frame(maxWidth: .infinity)
-                    .overlay(alignment: .bottom) {
-                        if let t = store.toast {
-                            ToastView(toast: t) { store.performUndo() }
-                                .padding(.bottom, 90)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
             }
             .padding(Theme.gap)
+            .overlay(alignment: .top) {
+                if let t = store.toast {
+                    ToastView(toast: t) { store.performUndo() }
+                        .padding(.top, 14)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
             .animation(.spring(duration: 0.3), value: store.toast)
 
             if store.searchPresented {
